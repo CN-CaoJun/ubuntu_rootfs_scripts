@@ -1,12 +1,8 @@
 #!/bin/bash -e
 
 if [ ! $TARGET ]; then
-	echo "---------------------------------------------------------"
-	echo " The default version is ubuntu 20 server:"
-	echo "---------------------------------------------------------"
-
-	TARGET='lite'
-    echo -e "\033[47;36m set TARGET = server...... \033[0m"
+    TARGET=lite
+    echo -e "\033[47;36m set TARGET=$TARGET...... \033[0m"
 fi
 
 if [ "$ARCH" == "armhf" ]; then
@@ -20,7 +16,7 @@ fi
 
 TARGET_ROOTFS_DIR="binary"
 
-sudo rm -rf $TARGET_ROOTFS_DIR/
+# sudo rm -rf $TARGET_ROOTFS_DIR/
 
 if [ ! -d $TARGET_ROOTFS_DIR ] ; then
     sudo mkdir -p $TARGET_ROOTFS_DIR
@@ -61,36 +57,8 @@ export LC_ALL=C.UTF-8
 apt-get -y update
 apt-get -f -y upgrade
 
-if [ "$TARGET" == "gnome" ]; then
-    apt install -y ubuntu-desktop-minimal rsyslog sudo dialog apt-utils ntp evtest onboard
-    mv /var/lib/dpkg/info/ /var/lib/dpkg/info_old/
-    mkdir /var/lib/dpkg/info/
-    apt-get update
-    apt install -y ubuntu-desktop-minimal rsyslog sudo dialog apt-utils ntp evtest onboard
-    mv /var/lib/dpkg/info_old/* /var/lib/dpkg/info/
-elif [ "$TARGET" == "xfce" ]; then
-    apt install -y xubuntu-core onboard rsyslog sudo dialog apt-utils ntp evtest udev
-    mv /var/lib/dpkg/info/ /var/lib/dpkg/info_old/
-    mkdir /var/lib/dpkg/info/
-    apt-get update
-    apt install -y xubuntu-core onboard rsyslog sudo dialog apt-utils ntp evtest udev
-    mv /var/lib/dpkg/info_old/* /var/lib/dpkg/info/
-elif [ "$TARGET" == "lite" ]; then
+if [ "$TARGET" == "lite" ]; then
     apt install -y rsyslog sudo dialog apt-utils ntp evtest acpid
-elif [ "$TARGET" == "gnome-full" ]; then
-    apt install -y ubuntu-desktop-minimal rsyslog sudo dialog apt-utils ntp evtest onboard
-    mv /var/lib/dpkg/info/ /var/lib/dpkg/info_old/
-    mkdir /var/lib/dpkg/info/
-    apt-get update
-    apt install -y ubuntu-desktop-minimal rsyslog sudo dialog apt-utils ntp evtest onboard
-    mv /var/lib/dpkg/info_old/* /var/lib/dpkg/info/
-elif [ "$TARGET" == "xfce-full" ]; then
-    apt install -y xubuntu-desktop onboard rsyslog sudo dialog apt-utils ntp evtest udev
-    mv /var/lib/dpkg/info/ /var/lib/dpkg/info_old/
-    mkdir /var/lib/dpkg/info/
-    apt-get update
-    apt install -y xubuntu-desktop onboard rsyslog sudo dialog apt-utils ntp evtest udev
-    mv /var/lib/dpkg/info_old/* /var/lib/dpkg/info/
 fi
 
 \${APT_INSTALL} net-tools openssh-server ifupdown alsa-utils ntp network-manager gdb inetutils-ping libssl-dev \
@@ -100,38 +68,6 @@ fi
 
 \${APT_INSTALL} ttf-wqy-zenhei xfonts-intl-chinese
 
-if [[ "$TARGET" == "gnome-full" ||  "$TARGET" == "xfce-full" ]]; then
-    apt purge ibus firefox -y
-
-    echo -e "\033[47;36m Install Chinese fonts.................... \033[0m"
-    \${APT_INSTALL} language-pack-zh-hans fonts-noto-cjk-extra gnome-user-docs-zh-hans language-pack-gnome-zh-hans
-
-    # set default xinput for fcitx
-    \${APT_INSTALL} fcitx fcitx-table fcitx-googlepinyin fcitx-pinyin fcitx-config-gtk
-    sed -i 's/default/fcitx/g' /etc/X11/xinit/xinputrc
-
-    \${APT_INSTALL} ipython3 jupyter
-fi
-
-if [[ "$TARGET" == "gnome-full" ||  "$TARGET" == "xfce-full" ]]; then
-    # Uncomment zh_CN.UTF-8 for inclusion in generation
-    sed -i 's/^# *\(zh_CN.UTF-8\)/\1/' /etc/locale.gen
-    echo "LANG=zh_CN.UTF-8" >> /etc/default/locale
-
-    # Generate locale
-    locale-gen zh_CN.UTF-8
-
-    # Export env vars
-    echo "LC_ALL=zh_CN.UTF-8" >> /etc/environment    
-    echo "LANG=zh_CN.UTF-8" >> /etc/environment
-    echo "LANGUAGE=zh_CN:zh:en_US:en" >> /etc/environment
-
-    echo "export LC_ALL=zh_CN.UTF-8" >> /etc/profile.d/zh_CN.sh
-    echo "export LANG=zh_CN.UTF-8" >> /etc/profile.d/zh_CN.sh
-    echo "export LANGUAGE=zh_CN:zh:en_US:en" >> /etc/profile.d/zh_CN.sh
-
-    \${APT_INSTALL} $(check-language-support)
-fi
 
 if [[ "$TARGET" == "gnome" || "$TARGET" == "gnome-full" ]]; then
     \${APT_INSTALL} mpv acpid gnome-sound-recorder
@@ -143,7 +79,7 @@ fi
 
 pip3 install python-periphery Adafruit-Blinka -i https://mirrors.aliyun.com/pypi/simple/
 
-HOST=lubancat
+HOST=ARM64Server
 
 # Create User
 useradd -G sudo -m -s /bin/bash arm64
@@ -154,15 +90,15 @@ IEOF
 gpasswd -a arm64 video
 gpasswd -a arm64 audio
 passwd root <<IEOF
-root
-root
+arm64
+arm64
 IEOF
 
 # allow root login
 sed -i '/pam_securetty.so/s/^/# /g' /etc/pam.d/login
 
 # hostname
-echo lubancat > /etc/ARM64-Server
+echo ARM64Server > /etc/hostname
 
 # set localtime
 ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
@@ -211,6 +147,9 @@ EOF
 
 ./ch-mount.sh -u $TARGET_ROOTFS_DIR
 
-DATE=$(date +%Y%m%d)
-echo -e "\033[47;36m Run tar pack ubuntu-base-$TARGET-$ARCH-$DATE.tar.gz \033[0m"
-sudo tar zcf ubuntu-base-$TARGET-$ARCH-$DATE.tar.gz $TARGET_ROOTFS_DIR/*
+DATE=$(date +%Y%m%d%H%M)
+echo -e "\033[47;36m Run tar pack ubuntu-server-$ARCH-$DATE.tar.gz \033[0m"
+cd $TARGET_ROOTFS_DIR
+echo -e "\033[47;current path is $(pwd) \033[0m"
+sudo tar zcf ../ubuntu-server-$ARCH-$DATE.tar.gz .
+
